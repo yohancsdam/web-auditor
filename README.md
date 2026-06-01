@@ -17,7 +17,7 @@ Aplicación completa en Astro + Preact + TailwindCSS para auditar sitios web y c
 - TypeScript
 - Preact
 - TailwindCSS v4 vía `@tailwindcss/vite`
-- Adaptador Node para rutas API
+- Adaptador Vercel Serverless para rutas API
 
 ## Scripts
 
