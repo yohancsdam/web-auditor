@@ -1,0 +1,24 @@
+{
+  "name": "web-auditor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/node": "latest",
+    "@astrojs/preact": "latest",
+    "@tailwindcss/vite": "latest",
+    "astro": "latest",
+    "preact": "latest",
+    "tailwindcss": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}
