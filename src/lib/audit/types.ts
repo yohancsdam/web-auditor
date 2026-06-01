@@ -30,15 +30,29 @@ export interface SeoMetadata {
   hasViewport: boolean;
   h1?: string;
   h1Count: number;
+  h2Count: number;
+  h3Count: number;
   hasOpenGraph: boolean;
   ogTitle?: string;
   ogDescription?: string;
   ogImage?: string;
+  hasTwitterCard: boolean;
+  twitterCard?: string;
   hasFavicon: boolean;
   hasCanonical: boolean;
+  canonicalUrl?: string;
   robotsMeta?: string;
   hasStructuredData: boolean;
+  structuredDataTypes: string[];
   langAttribute?: string;
+  metaKeywords?: string;
+  isHttps: boolean;
+  hasSitemap: boolean;
+  hasRobotsTxt: boolean;
+  imagesWithoutAlt: number;
+  totalImages: number;
+  internalLinksCount: number;
+  externalLinksCount: number;
 }
 
 export interface PageSpeedData {
@@ -55,6 +69,8 @@ export interface PageSpeedData {
 export interface UxSignals {
   hasMobileOptimization: boolean;
   hasContactInfo: boolean;
+  hasPhoneNumber: boolean;
+  hasEmailAddress: boolean;
   hasCta: boolean;
   hasForm: boolean;
   hasSocialLinks: boolean;
@@ -62,10 +78,22 @@ export interface UxSignals {
   hasExternalLinks: boolean;
   estimatedWordCount: number;
   imagesCount: number;
+  imagesWithAltCount: number;
   videosCount: number;
   navigationLinksCount: number;
   hasFooter: boolean;
   hasHeader: boolean;
+  hasAriaLabels: boolean;
+  buttonCount: number;
+  hasLiveChat: boolean;
+  hasPricingInfo: boolean;
+  hasGuarantee: boolean;
+  hasUrgency: boolean;
+  hasNewsletterSignup: boolean;
+  hasAboutPage: boolean;
+  hasTeamInfo: boolean;
+  hasBlogOrNews: boolean;
+  hasPortfolio: boolean;
 }
 
 export interface AuditRecommendation {

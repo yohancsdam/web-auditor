@@ -1,6 +1,6 @@
-import { c as createComponent } from './astro-component_CRfQzvw7.mjs';
+import { c as createComponent } from './astro-component_CihPcvzb.mjs';
 import 'piccolore';
-import { o as renderHead, k as renderTemplate } from './entrypoint_BTHVmS-V.mjs';
+import { o as renderHead, k as renderTemplate } from './entrypoint_D5hNBjf1.mjs';
 import 'clsx';
 /* empty css                 */
 

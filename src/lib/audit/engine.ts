@@ -15,6 +15,18 @@ function statusFromScore(score: number): OverallStatus {
   return 'critical';
 }
 
+async function checkUrlExists(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(8000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function runAudit(request: AuditRequest): Promise<AuditResult> {
   const { url } = request;
   let html = '';
@@ -38,10 +50,20 @@ export async function runAudit(request: AuditRequest): Promise<AuditResult> {
   const seoMetadata = extractSeoMetadata(html, url);
   const uxSignals = extractUxSignals(html);
 
-  const pagespeedSettled = await Promise.allSettled([
-    fetchPageSpeedData(url, 'mobile'),
-    fetchPageSpeedData(url, 'desktop'),
+  // Check sitemap and robots.txt in parallel with PageSpeed
+  const origin = new URL(url).origin;
+  const [pagespeedSettled, sitemapExists, robotsExists] = await Promise.all([
+    Promise.allSettled([
+      fetchPageSpeedData(url, 'mobile'),
+      fetchPageSpeedData(url, 'desktop'),
+    ]),
+    checkUrlExists(`${origin}/sitemap.xml`),
+    checkUrlExists(`${origin}/robots.txt`),
   ]);
+
+  // Inject sitemap/robots results into seoMetadata
+  seoMetadata.hasSitemap = sitemapExists;
+  seoMetadata.hasRobotsTxt = robotsExists;
 
   const pageSpeedMobile = pagespeedSettled[0].status === 'fulfilled' ? pagespeedSettled[0].value : null;
   const pageSpeedDesktop = pagespeedSettled[1].status === 'fulfilled' ? pagespeedSettled[1].value : null;
@@ -55,11 +77,16 @@ export async function runAudit(request: AuditRequest): Promise<AuditResult> {
       hasSocialLinks: uxSignals.hasSocialLinks,
       hasTrustSignals: uxSignals.hasTrustSignals,
       hasFavicon: seoMetadata.hasFavicon,
+      hasAboutPage: uxSignals.hasAboutPage,
+      hasTeamInfo: uxSignals.hasTeamInfo,
+      hasBlogOrNews: uxSignals.hasBlogOrNews,
+      hasPortfolio: uxSignals.hasPortfolio,
     },
     {
       title: seoMetadata.title,
       ogImage: seoMetadata.ogImage,
       hasOpenGraph: seoMetadata.hasOpenGraph,
+      hasStructuredData: seoMetadata.hasStructuredData,
     },
   );
 
@@ -68,19 +95,38 @@ export async function runAudit(request: AuditRequest): Promise<AuditResult> {
     ...uxAnalysis.findings,
     ...conversionAnalysis.findings,
     ...brandingAnalysis.findings,
+    ...performanceAnalysis.findings,
   ];
 
+  // Add overall performance score finding when low
   if (pageSpeedMobile && pageSpeedMobile.performanceScore < 70) {
     allFindings.push({
       id: 'perf-low-score',
       category: 'performance' as AuditCategory,
       severity: pageSpeedMobile.performanceScore < 50 ? 'critical' : 'important',
-      title: 'Rendimiento bajo en móvil',
-      description: `El score de rendimiento móvil es ${pageSpeedMobile.performanceScore}/100.`,
-      commercialImpact: 'Una carga lenta provoca que los usuarios abandonen antes de ver el contenido. Impacta directamente en conversiones.',
-      recommendation: 'Optimizar imágenes, implementar lazy loading, reducir JavaScript bloqueante y considerar un CDN.',
+      title: `Rendimiento móvil bajo: ${pageSpeedMobile.performanceScore}/100`,
+      description: `PageSpeed Insights puntúa el rendimiento móvil con ${pageSpeedMobile.performanceScore}/100.`,
+      commercialImpact: 'Una carga lenta provoca que los usuarios abandonen antes de ver el contenido. Google usa esta métrica para posicionamiento. Impacta directamente en conversiones y ranking.',
+      recommendation: 'Optimizar imágenes (WebP, compresión), implementar lazy loading, reducir JavaScript bloqueante, usar un CDN y mejorar el tiempo de respuesta del servidor.',
       score: pageSpeedMobile.performanceScore,
     });
+  }
+
+  // Desktop vs mobile performance comparison
+  if (pageSpeedMobile && pageSpeedDesktop) {
+    const gap = pageSpeedDesktop.performanceScore - pageSpeedMobile.performanceScore;
+    if (gap > 30) {
+      allFindings.push({
+        id: 'perf-mobile-desktop-gap',
+        category: 'performance' as AuditCategory,
+        severity: 'important',
+        title: `Gran diferencia móvil vs escritorio (${pageSpeedMobile.performanceScore} vs ${pageSpeedDesktop.performanceScore})`,
+        description: `Hay una diferencia de ${gap} puntos entre el rendimiento móvil (${pageSpeedMobile.performanceScore}) y el de escritorio (${pageSpeedDesktop.performanceScore}).`,
+        commercialImpact: 'La mayoría del tráfico es móvil. Si la versión móvil rinde mucho peor, se está perdiendo la mayor parte de los visitantes potenciales.',
+        recommendation: 'Priorizar la optimización móvil: imágenes responsive, reducción de JavaScript no esencial y mejora del tiempo de respuesta del servidor.',
+        score: pageSpeedMobile.performanceScore,
+      });
+    }
   }
 
   const scores = {
@@ -93,6 +139,8 @@ export async function runAudit(request: AuditRequest): Promise<AuditResult> {
 
   const { globalScore, status: globalStatus } = calculateGlobalScore(scores);
 
+  const performanceFindings = allFindings.filter((finding) => finding.category === 'performance');
+
   const categoryScores: Record<AuditCategory, CategoryScore> = {
     performance: {
       category: 'performance',
@@ -100,7 +148,7 @@ export async function runAudit(request: AuditRequest): Promise<AuditResult> {
       score: performanceAnalysis.score,
       status: statusFromScore(performanceAnalysis.score),
       summary: performanceAnalysis.summary,
-      findings: allFindings.filter((finding) => finding.category === 'performance'),
+      findings: performanceFindings,
     },
     seo: {
       category: 'seo',
